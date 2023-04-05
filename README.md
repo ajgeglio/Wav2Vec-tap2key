@@ -1,4 +1,8 @@
-This is for the Wav2Vec base model with a 34-classs classification layer trained on surface key taps. 
+# Wav2Vec-tap2key
+### Optimizing the Wav2Vec2 base model with a 34-classs classification layer representing tap locations.
+
+Data: Audio from test users tapping on a surface with that has a graphical keyboard with 34 key locations
+
 
 The facebook/wav2vec2-base pretrained transformer
 https://huggingface.co/facebook/wav2vec2-base
@@ -19,7 +23,7 @@ Authors: Alexei Baevski, Henry Zhou, Abdelrahman Mohamed, Michael Auli
 
 
 # **** Python Files ****
-#############################################################################################
+
 1) WavPreprocess.py - DATA PREPROCESSING
 Creates tap samples (.wav) and labels (.csv) from a wavfile of recorded typing sentences and associated neonode data
 usage: WavPreprocess.py [-h] --dir DIR_ --idx IDX_ [--plot] [--latency LATENCY_] [--selectivity SELECTIVITY] --peak_height PEAK_HEIGHT [--sample]
@@ -50,7 +54,7 @@ python3 WavPreprocess.py --dir '/work/ajgeglio/Tap_Data/Tony_01_25_23_data'
 --idx 9 --latency -0.14 --peak_height 0.0025 --plot --selectivity 0.134 --sample
 
 The OUTPUT for each recording sould be a .wav file for each tap and 1 csv file of label data.
-###########################################################################################
+
 2) create_dataset.py - DATASET GENERATION
 usage: create_dataset.py [-h] [--all_data] [--presplit] [--oversample] [--test_size TS_] [--prop PROP_] [--reshape_c_style] [--reshape_stack]
                          [--max_absolute] [--seed SEED_] [--plot_average_channel] [--all_dir96k ALL_DIR96K] [--train_dir96k TRAIN_DIR96K]
@@ -59,6 +63,7 @@ usage: create_dataset.py [-h] [--all_data] [--presplit] [--oversample] [--test_s
 
 Creates a dataset of taps from a wavfile of recorded typed sentences and associated neonode file
 optional arguments:
+
   -h, --help            show this help message and exit
   --all_data            Used if 1 directory has all samples
   --presplit            Used if TRAIN and VALIDATION+EVALUATION samples are in separate directories
@@ -85,7 +90,7 @@ optional arguments:
                         directory of a training dataset only
   --save_te96k SAVE_TE96K
                         directory of a dictionary dataset with validation+evaluation sets
-###########################################################################################
+
 3) Wav2vec2_tap2key.py - DATASET GENERATION + MODEL TRAINER 
 usage: Wav2vec2_tap2key.py [-h] [--dataset_dir DATASET_DIR] [--early_stop] [--early_patience EARLY_PATIENCE] [--epochs EPOCHS]
 
@@ -101,7 +106,7 @@ optional arguments:
   --early_patience EARLY_PATIENCE
                         number of worse evals before early stopping
   --epochs EPOCHS       number of epochs to run
-##########################################################################################
+
 4) predict_model_conf_matrix - EVALUATE
 usage: predict_model_conf_matrix.py [-h] [--dataset_dir DATASET_DIR]
 
@@ -141,4 +146,4 @@ or
 
 Needed for counting physical CPU cores:
 % pip install psutil# Wav2Vec-tap2key
-# Wav2Vec-tap2key
+
