@@ -934,7 +934,68 @@ weighted avg       0.87      0.86      0.86      2456
 
 
 
+## Using Data Augmentation
+Loading best model from /work/ajgeglio/pretrained_models/wav2vec2-base_Apr-08-2023-17:48_tap2key/checkpoint-5124 (score: 0.9247987185065054).
+{'train_runtime': 21541.0734, 'train_samples_per_second': 150.814, 'train_steps_per_second': 0.585, 'train_loss': 0.8651363017067076, 'epoch': 149.99}
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████| 12600/12600 [5:59:01<00:00,  1.71s/it]
+***** Running Evaluation *****
+  Num examples = 2455
+  Batch size = 64
+100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████| 39/39 [00:10<00:00,  3.60it/s]
+TOTAL TIME: 21562.59
+***** Running Prediction *****
+  Num examples = 2456
+  Batch size = 64
+100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 39/39 [00:12<00:00,  3.69it/s]TOTAL TIME: 170.34
+## Report
+              precision    recall  f1-score   support
 
+          _1       0.77      0.89      0.83        38
+          _2       0.90      0.89      0.90        74
+          _3       0.79      0.84      0.81        44
+          _4       0.85      0.84      0.84        68
+          _5       0.95      0.84      0.89       102
+          _6       0.91      0.94      0.92        63
+           a       0.93      0.95      0.94       124
+           b       0.97      0.97      0.97        58
+           c       0.90      0.96      0.93        67
+           d       0.93      0.92      0.93        62
+           e       0.93      0.94      0.93       133
+           f       0.93      0.91      0.92        58
+           g       0.96      0.96      0.96        48
+           h       0.95      0.94      0.95        83
+           i       0.98      0.91      0.94       119
+           j       0.85      0.90      0.87        49
+           k       0.87      0.89      0.88        45
+           l       0.96      0.94      0.95        52
+           m       0.94      0.92      0.93        52
+           n       0.93      0.94      0.94        71
+        none       0.96      0.96      0.96        67
+           o       0.98      0.95      0.96       137
+           p       0.97      0.96      0.96        71
+           q       0.90      0.90      0.90        49
+           r       0.92      0.93      0.92        85
+           s       0.97      0.96      0.97       106
+           t       0.94      0.95      0.95       103
+           u       0.91      0.98      0.94       101
+           v       0.93      0.97      0.95        40
+           w       0.91      0.93      0.92        46
+           x       0.90      0.92      0.91        50
+           y       0.95      0.91      0.93        88
+           z       0.97      0.93      0.95        60
+           |       0.98      0.98      0.98        43
+## Results
+    accuracy                           0.93      2456
+   macro avg       0.92      0.93      0.92      2456
+weighted avg       0.93      0.93      0.93      2456
+
+[[34  3  0 ...  0  0  0]
+ [ 5 66  3 ...  0  0  0]
+ [ 0  4 37 ...  0  0  1]
+ ...
+ [ 1  0  0 ... 80  0  0]
+ [ 0  0  0 ...  0 56  0]
+ [ 0  0  0 ...  0  0 42]]
 ## Other Stats
 Creating Dataset
 Saving evaluation dataset separately to: /work/ajgeglio/Tap_Data/04.Test_Dataset_96k                                                                
@@ -998,6 +1059,98 @@ Dataset({
     features: ['label', 'input_values'],
     num_rows: 21658
 })
+
+## Keras Sequential Conv1d net. All data, oversampled, 16 khz, interleave chan, len 10,928
+### Model
+Model: "sequential"
+ _________________________________________________________________
+  Layer (type)                Output Shape              Param #   
+ =================================================================
+ conv1d (Conv1D)             (None, 2701, 512)         66048     
+                                                                 
+ batch_normalization (BatchN  (None, 2701, 512)        2048      
+ ormalization)                                                   
+                                                                 
+ max_pooling1d (MaxPooling1D  (None, 1350, 512)        0         
+ )                                                               
+                                                                 
+ dropout (Dropout)           (None, 1350, 512)         0         
+                                                                 
+ conv1d_1 (Conv1D)           (None, 306, 512)          33554944  
+                                                                 
+ batch_normalization_1 (Batc  (None, 306, 512)         2048      
+ hNormalization)                                                 
+                                                                 
+ max_pooling1d_1 (MaxPooling  (None, 153, 512)         0         
+ 1D)                                                             
+                                                                 
+ dropout_1 (Dropout)         (None, 153, 512)          0         
+                                                                 
+ conv1d_2 (Conv1D)           (None, 45, 128)           4194432   
+                                                                 
+ batch_normalization_2 (Batc  (None, 45, 128)          512       
+ hNormalization)                                                 
+                                                                 
+ max_pooling1d_2 (MaxPooling  (None, 22, 128)          0         
+ 1D)                                                             
+                                                                 
+ dropout_2 (Dropout)         (None, 22, 128)           0         
+                                                                 
+ flatten (Flatten)           (None, 2816)              0         
+                                                                 
+ dense (Dense)               (None, 128)               360576    
+                                                                 
+ dropout_3 (Dropout)         (None, 128)               0         
+                                                                 
+ dense_1 (Dense)             (None, 34)                4386      
+                                                                 
+=================================================================
+Total params: 38,184,994
+Trainable params: 38,182,690
+Non-trainable params: 2,304
+_________________________________________________________________
+
+### Report
+              precision    recall  f1-score   support
+
+          _1       0.83      0.63      0.72        38
+          _2       0.79      0.82      0.81        74
+          _3       0.69      0.86      0.77        44
+          _4       0.86      0.63      0.73        68
+          _5       0.81      0.89      0.85       102
+          _6       0.88      0.90      0.89        63
+           a       0.95      0.94      0.95       124
+           b       1.00      0.72      0.84        58
+           c       0.79      0.90      0.84        67
+           d       0.98      0.95      0.97        62
+           e       0.95      0.94      0.95       133
+           f       0.95      0.93      0.94        58
+           g       0.98      0.94      0.96        48
+           h       0.94      0.95      0.95        83
+           i       0.88      0.91      0.89       119
+           j       0.90      0.92      0.91        49
+           k       0.94      0.98      0.96        45
+           l       0.98      1.00      0.99        52
+           m       0.94      0.96      0.95        52
+           n       0.83      0.94      0.88        71
+        none       0.87      0.88      0.87        67
+           o       0.98      0.91      0.95       137
+           p       0.93      0.99      0.96        71
+           q       0.98      0.88      0.92        49
+           r       0.92      0.91      0.91        85
+           s       0.96      0.93      0.95       106
+           t       0.94      0.94      0.94       103
+           u       0.92      0.90      0.91       101
+           v       0.84      0.95      0.89        40
+           w       0.90      0.96      0.93        46
+           x       0.92      0.88      0.90        50
+           y       0.93      0.93      0.93        88
+           z       0.88      0.95      0.91        60
+           |       0.98      0.98      0.98        43
+### Results
+    accuracy                           0.91      2456
+   macro avg       0.91      0.90      0.90      2456
+weighted avg       0.91      0.91      0.91      2456
 
 
 ## Model

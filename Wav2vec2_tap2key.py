@@ -1,5 +1,9 @@
 '''
-Wav2vec2_tap2key is a transformer based on pretrained facebook Wav2vec2 model for audio processing and audio sample classification
+Wav2vec2_tap2key does supervised training and evaluation on audio data with labels. 
+The model is a transformer based on Wav2vec 2.0 architecture with the Facebook/Wav2Vec2-base weight initialialization. 
+The fine tuning is done on an added 34 class layer based on the virtual table-top keyboard keys.
+
+By default it creates a dataset from the samples and labels and interleaves 8-channel audio and casts it to 16 khz
 
 '''
 from huggingface_hub import notebook_login
@@ -90,14 +94,16 @@ if __name__== '__main__':
         ########### Load alreay created HF DATASETS ######################
         print('loading hugging face dataset created earlier')
         encoded_dataset = load_from_disk(args.dataset_dir)
-        encoded_dataset['train'] = encoded_dataset['train'].map(augment_taps, args.fs_)
-        # tap_dataset = tap_dataset.cast_column("audio", Audio(sampling_rate = args.fs_, mono=False))
+        # For testing an augmentation mapping
+        # encoded_dataset['train'] = encoded_dataset['train'].map(augment_taps, args.fs_)
+        
+        tap_dataset = tap_dataset.cast_column("audio", Audio(sampling_rate = args.fs_, mono=False))
         # tap_dataset_test = load_from_disk(args.test_set_dir)
 
     if not args.load_dataset:
         print("Creating Dataset")
         s2 = stopwatch()
-        tap_dataset = create_dataset(args.data_dir, args.save_te96k, args.fs_, args.seed_)
+        tap_dataset = create_dataset(args.data_dir, args.save_te96k, args.seed_)
         tap_dataset = tap_dataset.cast_column("audio", Audio(sampling_rate = args.fs_, mono=False))
         example = tap_dataset['train'][64]
         # train_dataset = tap_dataset['train'].to_iterable_dataset()
@@ -106,15 +112,9 @@ if __name__== '__main__':
         print(encoded_dataset)
         print(f"DATASET + FEATURE CREATION TIME: {stopwatch() - s2:.2f}")
 
-    # Label Dictionary
-    # try:
-    #     label2id, id2label = label_encoder(tap_dataset)
-    # except:
     label2id, id2label = label_encoder(encoded_dataset)
-    
     num_labels = len(id2label)
 
-    # Oversamle uses a generator to save time
     if args.oversample:
         s4 = stopwatch()
         tap_dataset = oversample_interleave(encoded_dataset, args.seed_)
@@ -128,6 +128,7 @@ if __name__== '__main__':
         for example in train_dataset.take(1):
             yield example
     # example = Dataset.from_generator(tap_generator, features=tap_dataset['train'].features)
+    # if created the dataset
     try:
         fs = example['audio']['sampling_rate']
         wavform = example['audio']['array']
@@ -135,6 +136,7 @@ if __name__== '__main__':
         reshape_wavform = np.reshape(wavform, order='F', newshape=-1).shape
         sample_time = wavform.shape[0]/fs
         reshape_time = len(reshape_wavform)/fs
+    # if we loaded the dataset
     except:
         wavform = encoded_dataset['validation']['input_values'][64]
         fs = args.fs_
@@ -151,13 +153,6 @@ if __name__== '__main__':
 
     ############################################# MODEL ############################################################
 
-    # s3 = stopwatch()
-    # encoded_dataset = dev_ds.map(preprocess_function, remove_columns=["audio"], batched=True)
-    # encoded_dataset = encoded_dataset.to_iterable_dataset()
-    # print(f"Feature Creation Time: {stopwatch() - s3:.2f}")
-    # encoded_test_dataset = tap_dataset_test.map(preprocess_function, remove_columns=["audio"], batched=True)
-
-   
     if args.train:
         '''
         ######################## Training the model ###################################

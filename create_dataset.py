@@ -1,16 +1,17 @@
 '''
-Create a Hugging Face dataset from CSV files of Labels and .wav samples of captured taps already preprocessed
-That were created with WavPreprocess.py. This program has more flexibility to allow for experimentation with 
-different data shapes, such as reshape-c-style with np.reshape, stack, max-absulute value, average. These are defined in mapping 
-functions. Also, you can specify the proportion of total data to select for experimentation.
-The reshaping of the 8-channels were found to be the most effective represeentation, so this was incorperated into the preprocess
+* A flexible program to generate Hugging Face Datasets
+* Uses the labels (.csv) and samples (.wav) of captured taps with WavPreprocess.py
+* This program a lot of flexibility to allow for experimentation with different data shapes, such as interleaving the channels, stacking, max-absulute value from each channel, and channel average. 
+* These are defined in mapping functions. 
+* Also, you can specify the proportion of total data for additional experimentation.
+* The interleaving of the 8-channels were found to be the most effective representation, so this was incorperated into the preprocess
 function in the training program 'Wav2vec2-tap2key'.
 
 EXAMPLE
 
-python create_dataset.py --all_data --sample_rate 24_000 --reshape_c_style --oversample
+python create_dataset.py --all_data --sample_rate 16_000 --reshape_interleave --oversample
 
-Note - In order to use a mapping function like reshape_c_style, you must specify a sample_rate, otherwise the dataset
+Note - In order to use a mapping function like reshape_interleave, you must specify a sample_rate, otherwise the dataset
 only maps to the file location which is much more efficient, but does not contain the audio feature.
 
 '''
@@ -45,12 +46,11 @@ def concat_labels(label_files):
         label = np.concatenate([label,label1])
     return label
 
-def create_dataset(data_dir, test_ds_dir, fs_, seed_):
+def create_dataset(data_dir, test_ds_dir, seed_):
     label_files, tap_files = list_samples_labels(data_dir)
     label = concat_labels(label_files)
     ds = Dataset.from_dict(
         {"audio": tap_files, 'label': label[:,1]})
-    # ds = ds.cast_column("audio", Audio(sampling_rate = fs_, mono=False))
     ds = ds.class_encode_column("label")      
     # split twice and combine
     train_set = ds.train_test_split(    shuffle = True, 

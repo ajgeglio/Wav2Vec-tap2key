@@ -81,7 +81,6 @@ def dir_to_array2(wav_file_list, idx):
     init = wav_file_list[idx]
     init = re.findall(r'(\d+)',init)[-7:]
     init = f"{init[6]}-{init[4]}-{init[5]} {init[0]}:{init[1]}:{init[2]}.{init[3]}"
-    # init = f"{int(init[22:26])}-{int(init[16:18])}-{int(init[19:21])} {int(init[0:2])}:{int(init[3:5])}:{float(init[6:15])}"
     init = datetime.datetime.strptime(init, "%Y-%m-%d %H:%M:%S.%f")
     print("sound file start: ", init)
     snd = snd / 2.**32
@@ -122,8 +121,8 @@ def plot_avr_snd(   avr_signal, # input averaged sound time-domain matrix
     plt.subplots_adjust(hspace=0.1)
     ax.set_title('Average of 8 Channels', y=1.0, pad=-14)
     ax.plot(time_x, avr_signal, linewidth=linewidth)
-    ax.vlines(peaks_times - 2192/fs, -max_/4, max_/4, color='orange', linewidth=linewidth)
-    ax.vlines(peaks_times + 6000/fs ,-max_/4 ,max_/4, color='orange', linewidth=linewidth)
+    ax.vlines(peaks_times - behind/fs, -max_/4, max_/4, color='orange', linewidth=linewidth)
+    ax.vlines(peaks_times + forward/fs ,-max_/4 ,max_/4, color='orange', linewidth=linewidth)
     ax.vlines(node_times, -max_/6, max_/6, color='red', linewidth = linewidth)
     ax.vlines(peaks_times, -max_/8, max_/8, color='k', linewidth = linewidth/2)
     ax.hlines(args.peak_height, start,stop, color='k', linewidth = linewidth)
@@ -147,7 +146,7 @@ def reshape3_(data): #takes input of average signal or 8 channels
         d0 = np.abs(ar0).min()
         try:
             if d0 <= args.selectivity:
-                b = np.take(data, np.arange(p-2192,p+6000), axis=0)
+                b = np.take(data, np.arange(p-behind,p+forward), axis=0)
                 wavfile.write(f'{dir_}/05.wav_samples/{name_time}_{i:0>3}_8chan.wav', fs, b)
                 n+=1
             else: print(f"did not create sample {i:0>3} is not near a label")
@@ -190,7 +189,7 @@ def butter_highpass_filter(data, cutoff, fs, order=5):
 ######################################################################
 if __name__ == "__main__":
 
-    start = stopwatch()
+    start_time = stopwatch()
 
     parser = argparse.ArgumentParser(description='Creates tap samples and labels from a wavfile of person recorded typing sentences\
                                                   and associated neonode data')
@@ -246,6 +245,9 @@ if __name__ == "__main__":
     # start, stop = 0.05, 4
     s = int(start*fs)
     e = int(stop*fs)
+    behind = 2192
+    forward = 6000
+    print(f"Time window being sampled: {forward+behind} seconds")
     chan_8 = wav_matrix[s:e]
     time_x = time_x[s:e]
     trace = chan_8.mean(1)
@@ -281,4 +283,4 @@ if __name__ == "__main__":
             print(len(neonode_arr[:,7]), "labels created")
         else: print('DID NOT OVERWRITE LABEL FILE')
     
-    print(f"TOTAL TIME: {stopwatch() - start:.2f}")
+    print(f"TOTAL TIME: {stopwatch() - start_time:.2f}")

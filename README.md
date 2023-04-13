@@ -24,98 +24,74 @@ Authors: Alexei Baevski, Henry Zhou, Abdelrahman Mohamed, Michael Auli
 
 # **** Python Files ****
 
-1) WavPreprocess.py - DATA PREPROCESSING
-Creates tap samples (.wav) and labels (.csv) from a wavfile of recorded typing sentences and associated neonode data
-usage: WavPreprocess.py [-h] --dir DIR_ --idx IDX_ [--plot] [--latency LATENCY_] [--selectivity SELECTIVITY] --peak_height PEAK_HEIGHT [--sample]
-optional arguments:
-  -h, --help            show this help message and exit
-  --dir DIR_            directory of original wav files
-  --idx IDX_            integer index of .wav file
-  --plot                save plot to visually QC labels
-  --latency LATENCY_    adjustment to the neonode timing
-  --selectivity SELECTIVITY
-                        only select samples this close to a node label (seconds)
-  --peak_height PEAK_HEIGHT
-                        the height threshold for tap detection
-  --sample              generate samples and labels
+# 1) WavPreprocess.py - Used for raw sound file processing
+* Creates tap samples (.wav) and labels (.csv) from a wavfile that has recorded typing sounds
+* Requires an associated neonode file which is used for labeling
 
-The current os.walk function requires the following folder structure:
-    01.acoustic --- this is the folder where the original recordings are
-    02.neonode --- this is where the raw neonode csv is
+### NOTE - The current os.walk function requires the following folder structure:
+*    path/to/original/recordings/01.acoustic --- this is the folder where the original recordings are
+*    path/to/original/recordings/02.neonode --- this is where the raw neonode csv is
 
-EXAMPLE USAGE 
+## EXAMPLE USAGE 
 
-WHEN YOU WANT TO JUST PLOT WITHOUT SAMPLING
-python3 WavPreprocess.py --dir '/work/ajgeglio/Tap_Data/Tony_01_25_23_data' 
---idx 9 --latency -0.14 --peak_height 0.0025
+### First, it is reccomended to plot without generating samples...
+    python3 WavPreprocess.py --dir 'path/to/original/recordings' --idx 9 --latency -0.14 --peak_height 0.0025 --plot
+* The --latency argument allows you to adjust the recording time to match with the neonode taps detected
+* The --peak_height argument adjusts what taps are detected
+* The --idx is the index of the recording
+* It should be noted that the plot is showing you the filtered signal which was filtered using a Butterworth Highpass Filter
 
-WHEN YOU WANT TO SAMPLE AND STORE FILES
-python3 WavPreprocess.py --dir '/work/ajgeglio/Tap_Data/Tony_01_25_23_data' 
---idx 9 --latency -0.14 --peak_height 0.0025 --plot --selectivity 0.134 --sample
+### When the plot it generates which shows you the tap detection and sample windows, you can then perform the sample generation
+    python3 WavPreprocess.py --dir 'path/to/original/recordings' --idx 9 --latency -0.14 --peak_height 0.0025 --selectivity 0.134 --sample
+* The --selectivity argument allows you to ignore samples that do not coincide with a neonode samples. It is in seconds.
+* The --sample argument is going to generate the samples. 
+* The OUTPUT after sampling sould be a .wav file for each tap and 1 csv file of labels.
 
-The OUTPUT for each recording sould be a .wav file for each tap and 1 csv file of label data.
+# 2) create_dataset.py - Used for Datasets Generation
 
-2) create_dataset.py - DATASET GENERATION
-usage: create_dataset.py [-h] [--all_data] [--presplit] [--oversample] [--test_size TS_] [--prop PROP_] [--reshape_c_style] [--reshape_stack]
-                         [--max_absolute] [--seed SEED_] [--plot_average_channel] [--all_dir96k ALL_DIR96K] [--train_dir96k TRAIN_DIR96K]
-                         [--test_dir96k TEST_DIR96K] [--oversampled_dir INTERLEAVE_DIR] [--save_96k_all SAVE_96K_ALL] [--save_tr96k SAVE_TR96K]
-                         [--save_te96k SAVE_TE96K]
+* A flexible program to generate Hugging Face Datasets
+* Uses the labels (.csv) and samples (.wav) of captured taps with WavPreprocess.py
+* This program a lot of flexibility to allow for experimentation with different data shapes, such as interleaving the channels, stacking, max-absulute value from each channel, and channel average. 
+* These are defined in mapping functions. 
+* Also, you can specify the proportion of total data for additional experimentation.
+* The interleaving of the 8-channels were found to be the most effective representation, so this was incorperated into the preprocess
+function in the training program 'Wav2vec2-tap2key'.
 
-Creates a dataset of taps from a wavfile of recorded typed sentences and associated neonode file
-optional arguments:
+## EXAMPLE USAGE
 
-  -h, --help            show this help message and exit
-  --all_data            Used if 1 directory has all samples
-  --presplit            Used if TRAIN and VALIDATION+EVALUATION samples are in separate directories
-  --oversample          oversample class samples until 'all-exausted' to create class balance dataset
-  --test_size TS_       validation/evaluation dataset split
-  --prop PROP_          proportion of total data to use
-  --reshape_c_style     reshapes the 8-channel data with numpy reshape, order = C
-  --reshape_stack       flattens 8-channels by stacking to 8x length
-  --max_absolute        maps 8-channel dataset to a 1 channel ds with the max absolute amplitude value
-  --seed SEED_          set random seed
-  --plot_average_channel
-                        plot signal after average channel
-  --all_dir96k ALL_DIR96K
-                        directory of all 96k samples and labels
-  --train_dir96k TRAIN_DIR96K
-                        directory of train samples and labels
-  --test_dir96k TEST_DIR96K
-                        directory of train samples and labels
-  --oversampled_dir INTERLEAVE_DIR
-                        directory of the oversampled dataset
-  --save_96k_all SAVE_96K_ALL
-                        directory of dictionary dataset with train+validation+evaluation sets
-  --save_tr96k SAVE_TR96K
-                        directory of a training dataset only
-  --save_te96k SAVE_TE96K
-                        directory of a dictionary dataset with validation+evaluation sets
+    python create_dataset.py --all_data --sample_rate 16_000 --reshape_interleave --oversample
 
-3) Wav2vec2_tap2key.py - DATASET GENERATION + MODEL TRAINER 
-usage: Wav2vec2_tap2key.py [-h] [--dataset_dir DATASET_DIR] [--early_stop] [--early_patience EARLY_PATIENCE] [--epochs EPOCHS]
+* NOTE - In order to use a mapping function like reshape_interleave, you must specify a sample_rate, otherwise the dataset only maps to the file location which is much more efficient, but does not carry the data in memory for doing such calculations.
+* --oversampling argument uses Hugging Face "interleave_datasets" with the arguments probabilities=None, stopping_strategy = 'all_exausted'
+* --reshape_interleave argument reshapes the data using numpy.reshape(order="F", newshape=-1) which results in a 1-channel audio signal by flattening out the (n_channel) x (n_samples) array with the "F" order. See numpy reshape documentation.
 
-Wav2vec2_tap2key does training and evaluaiton of the tap sample dataset that has already been created. 
-The model is a transformer based on Wav2vec2 architecture with Wav2Vec2-base weight initialialization. 
-The fine tuning is done on 34 classes based on the virtual table-top keyboard and audio sample classification 
-is supervised based on the labels created with WavePreprocess.py
-optional arguments:
-  -h, --help            show this help message and exit
-  --dataset_dir DATASET_DIR
-                        directory of the hugging face dataset
-  --early_stop          early stopping using evaluation loss
-  --early_patience EARLY_PATIENCE
-                        number of worse evals before early stopping
-  --epochs EPOCHS       number of epochs to run
+# 3) Wav2vec2_tap2key.py - Training the model
 
-4) predict_model_conf_matrix - EVALUATE
-usage: predict_model_conf_matrix.py [-h] [--dataset_dir DATASET_DIR]
+* Wav2vec2_tap2key does supervised training and evaluation on audio data with labels. 
+* The model is a transformer based on Wav2vec 2.0 architecture with the Facebook/Wav2Vec2-base weight initialialization. 
+* By default the program creates a dataset from the samples and labels, interleaves 8-channel audio to 1-channel 8x length, and it casts it to 16 khz audio.
+* The AutoFeatureExtractor is used and the max_duration is set to 1-second. 
+* The fine tuning is done on an added 34 class layer based on the virtual table-top keyboard keys.
 
-Run Evaluation prediction on trained Wav2Vec2 model and output a performance report and confusion matrix plot of the results
 
-optional arguments:
-  -h, --help            show this help message and exit
-  --dataset_dir DATASET_DIR
-                        directory of the evaluation dataset
+## EXAMPLE USAGE
+
+    python3 Wav2Vec2_tap2key.py --oversample --train --early_stop 
+* --oversampling argument uses Hugging Face "interleave_datasets" with the arguments probabilities=None, stopping_strategy = 'all_exausted'.
+  * Each class is separated into a dataset and each dataset is randomly sampled until all classes run out of samples
+  * The resulting dataset has a class balance with size (n number of samples in most populated class) x (n classes)
+* --train argument executes the training loop
+  * default traing args saves only 2 checkpoints and loads best model at the end
+* --early_stop argument uses an early stopping callback with a default patience of 16 epochs with worse eval performance
+
+
+# 4) predict_model_conf_matrix.py - Used for model evaluation
+
+* Evaluates the holdout test set based using a saved model checkpoint
+* Has a function to output a confution matrix
+
+## EXAMPLE USAGE
+  python 3 --dataset_dir path/to/test/dataset
 
 # **** Setting up Python environment with conda****
 
@@ -145,5 +121,5 @@ or
 
 
 Needed for counting physical CPU cores:
-% pip install psutil# Wav2Vec-tap2key
+% pip install psutil
 
