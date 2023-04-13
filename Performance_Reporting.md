@@ -60,7 +60,7 @@ Batch size = 32
 100%|████████████████████████████████████████| 77/77 [00:10<00:00,  7.10it/s]
 TOTAL TIME: 22608.78
 ### Report
-                	precision   	 recall  	 f1-score  	 support   
+                precision   	 recall  	 f1-score  	 support   
 	 _1            	 0.71        	 0.45    	 0.55      	 38        
 	 _2            	 0.71        	 0.86    	 0.78      	 74        
 	 _3            	 0.70        	 0.64    	 0.67      	 44        
