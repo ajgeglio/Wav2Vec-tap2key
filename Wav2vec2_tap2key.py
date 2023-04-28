@@ -37,7 +37,9 @@ The feature extractor will return a list of numpy arays for each example:
 
 def preprocess_function(examples):
     max_duration = 1  # seconds
+    ## The line of code was from the origninal function
     # audio_arrays = [x["array"] for x in examples["audio"]]
+    ## The new line below does encoding and interleaving of channels in the same function
     audio_arrays = [np.reshape(x["array"], order='F', newshape=-1) for x in examples["audio"]]
     inputs = feature_extractor(
         audio_arrays, 
@@ -61,7 +63,7 @@ if __name__== '__main__':
     t = time.localtime()
     current_time = time.strftime("%b-%d-%Y-%H:%M", t)
     name_time = str(current_time).replace(':','.').replace(' ','.')
-    os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
     
     f1_metric = evaluate.load("f1")
     feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/wav2vec2-base")
@@ -78,7 +80,7 @@ if __name__== '__main__':
             table top keyboard and audio sample classification is supervised based on the labels created with\
             WavePreprocess.py')
     parser.add_argument('--dataset_dir', help="directory of the hugging face dataset", dest="dataset_dir", default='/work/ajgeglio/Tap_Data/09.Encoded_Dataset')
-    parser.add_argument('--data_dir', help="directory of the taps/labels", dest="data_dir", default='/work/ajgeglio/Tap_Data/00.All_TapsLabels_96k')
+    parser.add_argument('--data_dir', help="directory of the taps/labels", dest="data_dir", default='/work/ajgeglio/Tap_Data/00.All_TapsLabels_96k_newlabels')
     parser.add_argument('--seed',type=int, help='set random seed', dest = "seed_",default=42)
     parser.add_argument("--load_dataset", help="load hugging face dataset saved to disk", action="store_true")
     parser.add_argument('--save_te96k', help="directory to save evaluation dataset", dest="save_te96k", default = '/work/ajgeglio/Tap_Data/04.Test_Dataset_96k')
@@ -94,63 +96,71 @@ if __name__== '__main__':
         ########### Load alreay created HF DATASETS ######################
         print('loading hugging face dataset created earlier')
         encoded_dataset = load_from_disk(args.dataset_dir)
+        # Label Dict
+        label2id, id2label = label_encoder(encoded_dataset)
+        num_labels = len(id2label)
         # For testing an augmentation mapping
         # encoded_dataset['train'] = encoded_dataset['train'].map(augment_taps, args.fs_)
-        
-        tap_dataset = tap_dataset.cast_column("audio", Audio(sampling_rate = args.fs_, mono=False))
-        # tap_dataset_test = load_from_disk(args.test_set_dir)
-
-    if not args.load_dataset:
-        print("Creating Dataset")
-        s2 = stopwatch()
-        tap_dataset = create_dataset(args.data_dir, args.save_te96k, args.seed_)
-        tap_dataset = tap_dataset.cast_column("audio", Audio(sampling_rate = args.fs_, mono=False))
-        example = tap_dataset['train'][64]
-        # train_dataset = tap_dataset['train'].to_iterable_dataset()
-        # train_dataset = train_dataset.map(reshape_c_style)
-        encoded_dataset = tap_dataset.map(preprocess_function, remove_columns=["audio"], batched=True)
-        print(encoded_dataset)
-        print(f"DATASET + FEATURE CREATION TIME: {stopwatch() - s2:.2f}")
-
-    label2id, id2label = label_encoder(encoded_dataset)
-    num_labels = len(id2label)
-
-    if args.oversample:
-        s4 = stopwatch()
-        tap_dataset = oversample_interleave(encoded_dataset, args.seed_)
-        print(f"OVERSAMPLING TIME: {stopwatch() - s4:.2f}")
-
-    ############# PRINT BASIC DATA PARAMETERS ####################
-    print("############# WAVEFORM ###################")  
-  
-    # Define a generator function that yields the examples from an iterable dataset
-    def tap_generator():
-        for example in train_dataset.take(1):
-            yield example
-    # example = Dataset.from_generator(tap_generator, features=tap_dataset['train'].features)
-    # if created the dataset
-    try:
-        fs = example['audio']['sampling_rate']
-        wavform = example['audio']['array']
-        wavform_shape = wavform.shape
-        reshape_wavform = np.reshape(wavform, order='F', newshape=-1).shape
-        sample_time = wavform.shape[0]/fs
-        reshape_time = len(reshape_wavform)/fs
-    # if we loaded the dataset
-    except:
+    
+        ############# PRINT BASIC DATA PARAMETERS ####################
         wavform = encoded_dataset['validation']['input_values'][64]
         fs = args.fs_
         sample_time = len(wavform)/8/fs
         reshape_wavform = len(wavform)
         wavform_shape = int(len(wavform)/8*(96000/args.fs_)) 
         reshape_time = len(wavform)/fs
-    assert np.isclose(sample_time, 0.085375, rtol=0.001), "Data casted incorrectly to not reflect actual sample time window"
-    print("Sample rate:", fs,
+        print("Sample rate:", fs,
+            "\nReal sample time(s):", sample_time, 
+            "\nReshaped sample time(s):", reshape_time, 
+            "\nwaveform shapes:","original-->", wavform_shape, "-reshaped-->", reshape_wavform)
+        assert np.isclose(sample_time, 0.085375, rtol=0.001), "Data casted incorrectly to not reflect actual sample time window"
+        print("###########################################")  
+
+    if not args.load_dataset:
+        print("Creating Dataset")
+        s2 = stopwatch()
+        tap_dataset = create_dataset(args.data_dir, args.save_te96k, args.seed_)
+        tap_dataset = tap_dataset.cast_column("audio", Audio(sampling_rate = args.fs_, mono=False))
+        
+        # Label Dictionary
+        label2id, id2label = label_encoder(tap_dataset['validation'])
+        num_labels = len(id2label)
+       
+        ############# PRINT BASIC DATA PARAMETERS ####################
+        # Just look at an example
+        example = tap_dataset['train'][64]
+        fs = example['audio']['sampling_rate']
+        wavform = example['audio']['array']
+        wavform_shape = wavform.shape
+        reshape_wavform = np.reshape(wavform, order='F', newshape=-1).shape
+        sample_time = wavform.shape[1]/fs
+        reshape_time = reshape_wavform[0]/fs
+        print("Sample rate:", fs,
         "\nReal sample time(s):", sample_time, 
         "\nReshaped sample time(s):", reshape_time, 
         "\nwaveform shapes:","original-->", wavform_shape, "-reshaped-->", reshape_wavform)
-    print("###########################################")  
+        assert np.isclose(sample_time, 0.085375, rtol=0.001), "Data casted incorrectly to not reflect actual sample time window"
+        print("###########################################") 
 
+        # Feature Extractor
+        encoded_dataset = tap_dataset.map(preprocess_function, remove_columns=["audio"], batched=True)
+        print(encoded_dataset)
+        print(f"DATASET + FEATURE CREATION TIME: {stopwatch() - s2:.2f}")
+
+
+
+    
+    # Define a generator function that yields the examples from an iterable dataset
+    def tap_generator(): # This function was built to generate a dataset or sample from an iterable datasets. 
+                         # I wanted to explore iterable datasets but have not gotten it working
+        for example in train_dataset.take(1):
+            yield example
+    # example = Dataset.from_generator(tap_generator, features=tap_dataset['train'].features)
+ 
+    if args.oversample:
+        s4 = stopwatch()
+        encoded_dataset = oversample_interleave(encoded_dataset, args.seed_)
+        print(f"OVERSAMPLING TIME: {stopwatch() - s4:.2f}")
     ############################################# MODEL ############################################################
 
     if args.train:

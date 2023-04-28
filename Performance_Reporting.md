@@ -931,8 +931,67 @@ Using amp half precision backend
 weighted avg       0.87      0.86      0.86      2456
 
 
+## Using Data Augmentation, oversampled, 16 khz, interleave chan, len 10,928, new re-labeled dataset
+Loading best model from /work/ajgeglio/pretrained_models/wav2vec2-base_Apr-27-2023-11:38_tap2key/checkpoint-5525 (score: 0.9373599154814428).
+{'train_runtime': 12062.0615, 'train_samples_per_second': 270.601, 'train_steps_per_second': 1.057, 'train_loss': 1.237776001450283, 'epoch': 81.0}     
+ 54%|█████████████████████████████████████████████████████████▏                                                | 6885/12750 [3:21:02<2:51:15,  1.75s/it]
+***** Running Evaluation *****
+  Num examples = 2433
+  Batch size = 64
+100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 39/39 [00:11<00:00,  3.40it/s]
+TOTAL TIME: 13924.19
+***** Running Prediction *****
+  Num examples = 2456
+  Batch size = 64
+100%|████████████████████████████████████| 39/39 [00:11<00:00,  3.66it/s]TOTAL TIME: 107.57
+              precision    recall  f1-score   support
 
+          _1       0.88      0.61      0.72        38
+          _2       0.82      0.86      0.84        74
+          _3       0.81      0.95      0.88        44
+          _4       0.79      0.94      0.86        68
+          _5       0.89      0.82      0.86       102
+          _6       0.96      0.87      0.92        63
+           a       0.93      0.99      0.96       124
+           b       0.95      0.98      0.97        58
+           c       0.94      0.99      0.96        67
+           d       0.94      0.97      0.95        62
+           e       0.97      0.92      0.94       133
+           f       0.95      0.98      0.97        58
+           g       0.98      1.00      0.99        48
+           h       0.94      0.98      0.96        83
+           i       0.96      0.95      0.95       119
+           j       0.87      0.96      0.91        49
+           k       0.98      0.93      0.95        45
+           l       0.98      0.98      0.98        52
+           m       1.00      0.73      0.84        52
+           n       0.88      0.97      0.93        71
+        none       0.98      0.87      0.92        67
+           o       0.97      0.96      0.96       137
+           p       0.99      0.99      0.99        71
+           q       1.00      0.92      0.96        49
+           r       0.98      0.94      0.96        85
+           s       0.99      0.98      0.99       106
+           t       0.98      1.00      0.99       103
+           u       0.95      0.95      0.95       101
+           v       0.98      1.00      0.99        40
+           w       0.85      0.96      0.90        46
+           x       0.94      0.94      0.94        50
+           y       0.93      0.95      0.94        88
+           z       0.98      0.97      0.97        60
+           |       0.98      0.98      0.98        43
 
+    accuracy                           0.94      2456
+   macro avg       0.94      0.93      0.93      2456
+weighted avg       0.94      0.94      0.94      2456
+
+[[23 14  0 ...  0  0  0]
+ [ 0 64  9 ...  0  0  0]
+ [ 0  0 42 ...  0  0  1]
+ ...
+ [ 1  0  0 ... 84  0  0]
+ [ 0  0  0 ...  0 58  0]
+ [ 0  0  0 ...  0  0 42]]
 ## Using Data Augmentation, oversampled, 16 khz, interleave chan, len 10,928, add gaussian noise to training set
 Loading best model from /work/ajgeglio/pretrained_models/wav2vec2-base_Apr-08-2023-17:48_tap2key/checkpoint-5124 (score: 0.9247987185065054).
 {'train_runtime': 21541.0734, 'train_samples_per_second': 150.814, 'train_steps_per_second': 0.585, 'train_loss': 0.8651363017067076, 'epoch': 149.99}
@@ -946,7 +1005,7 @@ TOTAL TIME: 21562.59
   Num examples = 2456
   Batch size = 64
 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 39/39 [00:12<00:00,  3.69it/s]TOTAL TIME: 170.34
-## Report
+### Report
               precision    recall  f1-score   support
 
           _1       0.77      0.89      0.83        38
@@ -983,7 +1042,7 @@ TOTAL TIME: 21562.59
            y       0.95      0.91      0.93        88
            z       0.97      0.93      0.95        60
            |       0.98      0.98      0.98        43
-## Results
+### Results
     accuracy                           0.93      2456
    macro avg       0.92      0.93      0.92      2456
 weighted avg       0.93      0.93      0.93      2456

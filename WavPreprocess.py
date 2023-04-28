@@ -17,8 +17,7 @@ TO RUN...
 ##########################  EXAMPLE ######################################
 
 WHEN YOU WANT TO JUST PLOT WITHOUT SAMPLING - RECCOMENDED TO DO FIRST
-python3 WavPreprocess.py --dir '/work/ajgeglio/Tap_Data/Tony_01_25_23_data' 
---idx 9 --latency -0.14 --peak_height 0.0025 --plot
+python3 WavPreprocess.py --dir '/work/ajgeglio/Tap_Data/Tony_01_25_23_data' --idx 9 --latency -0.14 --peak_height 0.0025 --plot
 
 WHEN YOU WANT TO SAMPLE AND STORE FILES
 python3 WavPreprocess.py --dir '/work/ajgeglio/Tap_Data/Tony_01_25_23_data' 
@@ -137,11 +136,12 @@ def plot_avr_snd(   avr_signal, # input averaged sound time-domain matrix
     print(f"Plotted: {name_time} {len(node_times)} neonode taps")
 
 
-def reshape3_(data): #takes input of average signal or 8 channels
+def sample_(data): #takes input of average signal or 8 channels
     i = 1
     n = 0
+    snums = []
     # This is how I control the selectivity (is the sample near a neonode label)
-    for p, t in zip(peaks, peaks_times): #peaks is an index, p/fs is the time in decimal seconds
+    for p, t in zip(peaks, peaks_times): #peaks is an index, t=p/fs (the time in decimal seconds)
         ar0 = np.array(t - node_times) #only taking the ones near a label
         d0 = np.abs(ar0).min()
         try:
@@ -149,12 +149,14 @@ def reshape3_(data): #takes input of average signal or 8 channels
                 b = np.take(data, np.arange(p-behind,p+forward), axis=0)
                 wavfile.write(f'{dir_}/05.wav_samples/{name_time}_{i:0>3}_8chan.wav', fs, b)
                 n+=1
+                snums.append(i)
             else: print(f"did not create sample {i:0>3} is not near a label")
         except: 
             print(f'sample {i:0>3} not enough data in window')
             pass
         i+=1
-    print(f"Sampled: {name_time} \n {n} files created, {i-1} peaks detected")
+    print(f"Sampled: {name_time} \n{n} files created, {i-1} peaks detected")
+    return snums
 
 def plot_keys():
     fig, ax = plt.subplots()
@@ -220,8 +222,6 @@ if __name__ == "__main__":
     # ## this is for labeling. KNN maps the xy node loc to a key label. 
     # ## Then you can use predict to map future nnode hits
     key_loc = np.array(pd.read_csv(key_dir,header=None))
-    # plot_keys(dir_)
-    # quit()
     knn = KNeighborsClassifier(n_neighbors=1)
     knn.fit(key_loc[:,:2],key_loc[:,2])
 
@@ -230,24 +230,23 @@ if __name__ == "__main__":
     fs, wav_matrix, time_x, ini_record = dir_to_array2( wav_file_list = wav_file_paths,
                                                         idx = args.idx_) # in the list of 01.acoustic
 
-    name_time = str(ini_record).replace(':','.').replace(' ','.')
-    ini_record = ini_record - datetime.timedelta(seconds = args.latency_)
-    #################### Sound Attributes ##########################
+    #################### Sound File Attributes ##########################
+    name_time = str(ini_record).replace(':','.').replace(' ','.') # for file naming
+    ini_record = ini_record - datetime.timedelta(seconds = args.latency_) # After latency correction
     record_len = len(time_x)/fs
     end_record = ini_record + datetime.timedelta(seconds = record_len)
     #################### neonode data for plotting ###############################
-    neonode_arr = dir_to_node_loc()
+    neonode_arr = dir_to_node_loc() # The neonode data
     node_times= neonode_arr[:,3]
     node_labels = neonode_arr[:,7]
     # enter the start and end in seconds
     # There is usually noise at the beginning which is why I clip at start
     start, stop = 0.05, record_len
-    # start, stop = 0.05, 4
     s = int(start*fs)
     e = int(stop*fs)
-    behind = 2192
+    behind = 2192 # for window sample
     forward = 6000
-    print(f"Time window being sampled: {forward+behind} seconds")
+    print(f"Time window being sampled: {forward+behind} samples ({(forward+behind)/fs:0.3f} seconds)")
     chan_8 = wav_matrix[s:e]
     time_x = time_x[s:e]
     trace = chan_8.mean(1)
@@ -266,7 +265,7 @@ if __name__ == "__main__":
                             #   threshold = max_/16,
                               distance=12000, # 4 taps per second is 0.25s*96000=24000 
                               height = args.peak_height,
-                            #   prominence =max_/2
+                            #   prominence =max_, wlen = 6000
                               )[0]
     print(f'Detected {len(peaks)} peaks')
     peaks_times = time_x[peaks]
@@ -276,11 +275,13 @@ if __name__ == "__main__":
     
     if args.sample:
 
+        snums = sample_(chan_8) # Saves out all of the tap samples
+        idxs = np.array(snums)-1
         labels = np.c_[neonode_arr[:,[0,7,4,5,6]]]
-        reshape3_(chan_8) # Saves out all of the tap samples
         if not os.path.exists(f'{dir_}/04.labels/{name_time}_label.csv'):
             np.savetxt(f'{dir_}/04.labels/{name_time}_label.csv', labels, fmt='%s', delimiter=',')
             print(len(neonode_arr[:,7]), "labels created")
         else: print('DID NOT OVERWRITE LABEL FILE')
+        # print("sampled: ", snums)
     
     print(f"TOTAL TIME: {stopwatch() - start_time:.2f}")

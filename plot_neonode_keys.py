@@ -1,7 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-def concat_keys(key_dirs):
+
+
+def concat_keys(key_dirs):# not used currently
     all_keys = np.empty([0,6], dtype=str)
     for i in range(len(key_dirs)):
         key1 =  np.loadtxt(key_dirs[i], delimiter=',', dtype=str)
@@ -10,18 +12,12 @@ def concat_keys(key_dirs):
     return all_keys
 
 def plot_keys():
-    # key_dirs = [
-    #         # '/home/ajgeglio/FutureGroup/Tap_Data/abc/real.csv', 
-    #         # '/home/ajgeglio/FutureGroup/Tap_Data/abc/real (copy).csv',
-    #         # '/home/ajgeglio/FutureGroup/Tap_Data/abc/real (another copy).csv', 
-    #         '/home/ajgeglio/FutureGroup/Tap_Data/abc/real (3rd copy).csv'
-    #         ]
-    # all_keys = concat_keys(key_dirs)
-    key_dir = '/work/ajgeglio/Tap_Data/abc/key_label_location.csv'
-    raw_dir = '/work/ajgeglio/Tap_Data/abc/qwerty_locations.csv'
+    key_dir = '/work/ajgeglio/Tap_Data/13.key_centers/key-tap-locs.csv'
+    raw_dir = '/work/ajgeglio/Tap_Data/13.key_centers/qwerty_locations.csv'
     key_loc = np.array(pd.read_csv(key_dir,header=None))
+    key_loc = key_loc[key_loc[:,2] != 'none']
     raw_loc = np.array(pd.read_csv(raw_dir,header=None))
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(dpi=600)
     # Major ticks every 20, minor ticks every 5
     major_ticks = np.arange(0, 3500, 500)
     minor_ticks = np.arange(0, 3500, 50)
@@ -36,10 +32,15 @@ def plot_keys():
     # Or if you want different settings for the grids:
     ax.grid(which='minor', alpha=0.2)
     ax.grid(which='major', alpha=0.5)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_position(('data', 3250))
+    ax.spines['bottom'].set_position(('data', 1750))
     ax.axis('equal')
-    # ax.invert_xaxis()
-    ax.set_xlim(3250,250)
-    ax.set_ylim(1500,500)
+    ax.invert_xaxis()
+    ax.invert_yaxis()
+    ax.set_xlim(3500,-100)
+    ax.set_ylim(2600,0)
     z = key_loc[:,0]
     y = key_loc[:,1]
     n = key_loc[:,2]
@@ -48,12 +49,13 @@ def plot_keys():
     yr = raw_loc[:,4]
     nr = raw_loc[:,6]
 
-    ax.scatter(z, y, marker='s', sizes = [300],color='lightskyblue')
+    # ax.scatter(z, y, marker='s', sizes = [300],color='lightskyblue')
     ax.scatter(z, y, marker='.', sizes = [5], color='k')
-    ax.scatter(zr, yr, marker='.', sizes = [3], color='red')
+    # ax.scatter(zr, yr, marker='.', sizes = [3], color='red')
 
-    for i, txt in enumerate(n):
-        ax.annotate(txt, (z[i], y[i]))
-    plt.savefig(f"key_locs2.png")
+    # for i, txt in enumerate(n):
+    #     ax.annotate(txt, (z[i], y[i]))
+    plt.savefig(f"./key_locs2.png")
 
 
+plot_keys()

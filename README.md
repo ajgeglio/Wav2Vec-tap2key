@@ -25,7 +25,7 @@ Authors: Alexei Baevski, Henry Zhou, Abdelrahman Mohamed, Michael Auli
 # **** Python Files ****
 
 # 1) WavPreprocess.py - Used for raw sound file processing
-* Creates tap samples (.wav) and labels (.csv) from a wavfile that has recorded typing sounds
+* Creates tap samples in wave format (.wav) and associated labels (.csv) from a wavfile that has recorded typing sounds
 * Requires an associated neonode file which is used for labeling
 
 ### NOTE - The current os.walk function requires the following folder structure:
@@ -36,10 +36,11 @@ Authors: Alexei Baevski, Henry Zhou, Abdelrahman Mohamed, Michael Auli
 
 ### First, it is reccomended to plot without generating samples...
     python3 WavPreprocess.py --dir 'path/to/original/recordings' --idx 9 --latency -0.14 --peak_height 0.0025 --plot
-* The --latency argument allows you to adjust the recording time to match with the neonode taps detected
-* The --peak_height argument adjusts what taps are detected
-* The --idx is the index of the recording
-* It should be noted that the plot is showing you the filtered signal which was filtered using a Butterworth Highpass Filter
+* The --dir argument is the path to the directory not the specific folder with the .wav samples, i.e. /work/ajgeglio/Tap_Data/Tony_01_27_23_data
+* The --latency argument allows you to adjust the recording start time so to line up with the neonode data
+* The --peak_height argument adjusts what taps are detected from the wave file
+* The --idx is the index of the recording in the filepath
+* It should be noted that the generated plot is showing you the filtered averaged signal using a Butterworth Highpass Filter on the average of 8 channels. This is better for tap detection. The actual data that is sampled is the raw, 8-channel data of length 8192 at a sample rate of 96,000, or, 0.085 second windows.
 
 ### When the plot it generates which shows you the tap detection and sample windows, you can then perform the sample generation
     python3 WavPreprocess.py --dir 'path/to/original/recordings' --idx 9 --latency -0.14 --peak_height 0.0025 --selectivity 0.134 --sample

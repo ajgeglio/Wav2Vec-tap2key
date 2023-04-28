@@ -18,6 +18,7 @@ from Wav2vec2_tap2key import compute_metrics
 def preprocess_function(examples):
     feature_extractor = AutoFeatureExtractor.from_pretrained(model_checkpoint)
     max_duration = 8  # seconds
+    # This does encoding and interleaving of channels in the same function
     audio_arrays = [np.reshape(x["array"], order='F', newshape=-1) for x in examples["audio"]]
     inputs = feature_extractor(
         audio_arrays, 
@@ -45,10 +46,12 @@ if __name__== '__main__':
         tap_dataset_test = load_from_disk(args.dataset_dir)['evaluation']
     except:
         tap_dataset_test = load_from_disk(args.dataset_dir)
+        tap_dataset_test = tap_dataset_test.cast_column("audio", Audio(sampling_rate = 16000, mono=False))
+
     ############# PRINT BASIC DATA PARAMETERS ####################
     print("############# WAVEFORM ###################")    
     fs = tap_dataset_test.features['audio'].sampling_rate
-    wavform = tap_dataset_test[0]['audio']['array']
+    wavform = tap_dataset_test[64]['audio']['array']
     reshape_wavform = np.reshape(wavform, order='F', newshape=-1)
     sample_time = wavform.shape[1]/fs
     try: np.isclose(sample_time, 0.085375)
@@ -60,7 +63,7 @@ if __name__== '__main__':
         "\nReal sample time(s):", sample_time, 
         "\nReshaped sample time(s):", reshape_time, 
         "\nwaveform shapes:","original-->", wavform.shape, "reshaped-->", reshape_wavform.shape)
-    print("###########################################") 
+    # print("###########################################") 
     label2id, id2label = label_encoder(tap_dataset_test)
     num_labels = len(id2label)
     labels_ = label2id.keys()
@@ -94,22 +97,26 @@ if __name__== '__main__':
     # model_checkpoint = '/work/ajgeglio/pretrained_models/wav2vec2-base_Mar-19-2023-18:40_tap2key/checkpoint-6084'
     ##          Max absolute value from each channel, oversampled data (all exausted), used 100% of data collected to date
     # model_checkpoint = '/work/ajgeglio/pretrained_models/wav2vec2-base_Mar-16-2023-17:50_tap2key/checkpoint-6600' 
-    ##          100% of data, average channel, oversampled early stop 
+    ##          100% of data, average channel, oversampled early stop. Repeated experiment twice
     # model_checkpoint = '/work/ajgeglio/pretrained_models/wav2vec2-base_Mar-16-2023-23:19_tap2key/checkpoint-8631'
     # model_checkpoint = '/work/ajgeglio/pretrained_models/wav2vec2-base_Mar-21-2023-13:11_tap2key/checkpoint-6929'
-    ##          100p of data, interleave chan, 48k
+    ##          All data, interleave chan, 48k
     # model_checkpoint = '/work/ajgeglio/pretrained_models/wav2vec2-base_Mar-22-2023-19:43_tap2key/checkpoint-3612'
     ##          All data, oversampled, 24 khz, interleave chan, len 16,384
     # model_checkpoint =  '/work/ajgeglio/pretrained_models/wav2vec2-base_Mar-23-2023-09:08_tap2key/checkpoint-6216'
     ##          All data, oversampled, 16 khz, interleave chan, len 10928
-    model_checkpoint = '/work/ajgeglio/pretrained_models/wav2vec2-base_Mar-23-2023-15:49_tap2key/checkpoint-6468'
+    # model_checkpoint = '/work/ajgeglio/pretrained_models/wav2vec2-base_Mar-23-2023-15:49_tap2key/checkpoint-6468'
     ##          Top Microphones, 16 khz, oversampled
     # model_checkpoint = '/work/ajgeglio/pretrained_models/wav2vec2-base_Mar-24-2023-11:11_tap2key/checkpoint-6720'
     ##          Bottom Microphones, 16 khz, oversampled
     # model_checkpoint = '/work/ajgeglio/pretrained_models/wav2vec2-base_Mar-24-2023-18:40_tap2key/checkpoint-7476'
+    ##          Using Data augmentation
+    # model_checkpoint = '/work/ajgeglio/pretrained_models/wav2vec2-base_Apr-08-2023-17:48_tap2key/checkpoint-5124'
+    ##          New re-labeled dataset
+    model_checkpoint = '/work/ajgeglio/pretrained_models/wav2vec2-base_Apr-27-2023-11:38_tap2key/checkpoint-5525'
     batch_size = 64
-
     encoded_test_dataset = tap_dataset_test.map(preprocess_function, remove_columns=["audio"], batched=True)
+
     # print(encoded_test_dataset)
     model = AutoModelForAudioClassification.from_pretrained(
             model_checkpoint, 

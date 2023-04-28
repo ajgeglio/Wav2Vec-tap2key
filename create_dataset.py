@@ -9,7 +9,9 @@ function in the training program 'Wav2vec2-tap2key'.
 
 EXAMPLE
 
-python create_dataset.py --all_data --sample_rate 16_000 --reshape_interleave --oversample
+python create_dataset.py --sample_rate 16_000 --reshape_interleave --oversample
+
+python create_dataset.py --oversample --encode --sample_rate 16_000
 
 Note - In order to use a mapping function like reshape_interleave, you must specify a sample_rate, otherwise the dataset
 only maps to the file location which is much more efficient, but does not contain the audio feature.
@@ -121,11 +123,11 @@ def oversample_interleave(tap_dataset, seed_):
                                         ds13, ds14, ds15, ds16, ds17, ds18, ds19, ds20, ds21, ds22, ds23, ds24, ds25, 
                                         ds26, ds27, ds28, ds29, ds30, ds31, ds32, ds33], 
                                         probabilities=None, seed=seed_, stopping_strategy = 'all_exhausted')
-        ds_oversample = ds_oversample.map(augment_taps)
+        # ds_oversample = ds_oversample.map(augment_taps)
         # tap_dataset = tap_dataset
         ds_oversample = DatasetDict({       'train'         : ds_oversample,
                                             'validation'    : tap_dataset['validation'],
-                                            'test'          : tap_dataset['test']
+                                            # 'test'          : tap_dataset['test']
                                                })
         return ds_oversample
 
@@ -133,8 +135,8 @@ def oversample_interleave(tap_dataset, seed_):
 def preprocess_function(examples):
     feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/wav2vec2-base")
     max_duration = 1  # seconds
-    audio_arrays = [x["array"] for x in examples["audio"]]
-    # audio_arrays = [np.reshape(x["array"], order='F', newshape=-1) for x in examples["audio"]]
+    # audio_arrays = [x["array"] for x in examples["audio"]]
+    audio_arrays = [np.reshape(x["array"], order='F', newshape=-1) for x in examples["audio"]]
     inputs = feature_extractor(
         audio_arrays, 
         sampling_rate=feature_extractor.sampling_rate, 
@@ -204,16 +206,17 @@ if __name__ == "__main__":
     parser.add_argument('--presplit', help='Used if samples are stored in separate directories for training and testing', action="store_true")
     parser.add_argument("--oversample", help="oversample class samples until 'all-exausted' to create class balance dataset", action="store_true")
     parser.add_argument('--test_size',type=float, help='validation/evaluation dataset split', dest = "ts_",default=0.5)
+    parser.add_argument('--encode', help='maps and saves dataset with autofeature extractor (currently this is done in the training and inference programs)', action="store_true")
+    parser.add_argument('--seed',type=int, help='set random seed', dest = "seed_",default=42)
+    parser.add_argument('--sample_rate',type=int, help='sample rate to cast audio (khz)', dest = "fs_",default=None)
+    parser.add_argument('--plot_average_channel', help='plot signal after average channel', action="store_true")
+    # Mapping functions for past experiments
     parser.add_argument('--prop',type=float, help='proportion of total data to use', dest = "prop_",default=1.0)
     parser.add_argument('--reshape_interleave', help='reshapes an n_samp x 8-channel matrix with numpy reshape, order = F', action="store_true")
     parser.add_argument('--reshape_c_style_top', help='reshapes the 8-channel data with numpy reshape, only top mics', action="store_true")
     parser.add_argument('--reshape_c_style_bottom', help='reshapes the 8-channel data with numpy reshape, only bottom mics', action="store_true")
     parser.add_argument("--reshape_stack", help="flattens 8-channels by stacking to 8x length", action="store_true")
     parser.add_argument('--max_absolute', help='maps 8-channel dataset to a 1 channel ds with the max absolute amplitude value', action="store_true")
-    parser.add_argument('--encode', help='maps and saves dataset with autofeature extractor (currently this is done in the training and inference programs)', action="store_true")
-    parser.add_argument('--seed',type=int, help='set random seed', dest = "seed_",default=42)
-    parser.add_argument('--sample_rate',type=int, help='sample rate to cast audio (khz)', dest = "fs_",default=None)
-    parser.add_argument('--plot_average_channel', help='plot signal after average channel', action="store_true")
     # Taps and label files
     parser.add_argument('--data_dir', help="directory of all 96k samples and labels", required=False, dest="data_dir", default='/work/ajgeglio/Tap_Data/00.All_TapsLabels_96k')
     parser.add_argument('--train_dir96k', help="directory of train samples and labels", required=False, dest="train_dir96k", default='/work/ajgeglio/Tap_Data/01.Train_TapsLabels_96k')
@@ -242,8 +245,7 @@ if __name__ == "__main__":
         if args.fs_ != None:
             print(f"casting to {args.fs_} khz")
             tap_dataset = tap_dataset.cast_column("audio", Audio(mono=False, sampling_rate = args.fs_))
-        # To use the mapping functions
-        # try:
+        ############## To use the mapping functions #####################
         if args.reshape_interleave:
             print("Interleaving audio")
             example = tap_dataset[64]
@@ -287,9 +289,7 @@ if __name__ == "__main__":
             plt.plot(new_x)
             plt.savefig(f"/home/ajgeglio/FutureGroup/sample_avr_channel.png")
             quit()
-        # except: 
-        #     print('Dataset not created, you probably need to specify a sampling rate, ie, 16000 to use the mapping function')
-        #     quit()
+        ##################################################################
 
         tap_dataset = tap_dataset.class_encode_column("label")      
         # split twice and combine
@@ -303,13 +303,13 @@ if __name__ == "__main__":
                                                         test_size=args.ts_)
         tap_dataset = DatasetDict({
             'train'         : train_set['train'],
-            'validation'    : test_set['train'],
-            'test'          : test_set['test']})
+            'validation'    : test_set['train']})
         
         # print(f"Saving 3-split 96k dataset to disk, directory: {args.save_96k_all}")
         # tap_dataset.save_to_disk(args.save_96k_all)
-        # print(f"Saving evaluation dataset separately to: {args.save_te96k}")
-        # tap_dataset['evaluation'].save_to_disk(args.save_te96k)
+        print(f"Saving test dataset separately to: {args.save_te96k}")
+        tap_dataset_test =  test_set['test']
+        tap_dataset_test.save_to_disk(args.save_te96k)
         
         
     if args.presplit:
@@ -341,8 +341,10 @@ if __name__ == "__main__":
         feature_extractor = AutoFeatureExtractor.from_pretrained("facebook/wav2vec2-base")
         # tap_dataset = tap_dataset.cast_column("audio", Audio(mono=True))
         encoded_dataset = tap_dataset.map(preprocess_function, remove_columns=["audio"], batched=True)
+        encoded_dataset_test = tap_dataset_test.map(preprocess_function, remove_columns=["audio"], batched=True)
         print(f"Saving encoded dataset to disk, /work/ajgeglio/Tap_Data/09.Encoded_Dataset")
         encoded_dataset.save_to_disk('/work/ajgeglio/Tap_Data/09.Encoded_Dataset')
+        encoded_dataset_test.save_to_disk('/work/ajgeglio/Tap_Data/09.Encoded_Dataset_Test')
    
     print('DATASET DESCRIPTION #################################')
     print(tap_dataset)
